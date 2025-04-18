@@ -58,7 +58,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user,
             'token' => $token
-        ]);
+        ], 200);
     }
 
     function logout(Request $request) {
@@ -66,6 +66,56 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Has cerrado sesión con éxito'
+        ], 200);
+    }
+
+    function changePassword(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'oldPassword' => 'required|string',
+            'newPassword' => 'required|string|min:6|max:24|regex:/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\.\*!#"$%&\\/\\=?¿¡])(?=.*[a-zA-Z]).+$/',
+            'newPasswordAgain' => 'required|string|same:newPassword'
+        ],[
+            'oldPassword.required' => 'La contraseña anterior es obligatoria.',
+
+            'newPassword.required' => 'La contraseña nueva es oblligatoria.',
+            'newPassword.min' => 'La contraseña debe contener al menos 6 caracteres.',
+            'newPassword.max' => 'La contraseña debe contener máximo 24 caracteres.',
+            'newPassword.regex' => 'La contraseña debe contener letras minúsuclas y mayúsculas, números y caracteres especiales.',
+
+            'newPasswordAgain.same' => 'Las contraseñas no coinciden'
         ]);
+
+        // Sorprendentemente laravel hace esto por defecto
+        // if ($validator->fails()) {
+        //     return response()->json($validator->validated());
+        // }
+
+        $message = '';
+        $errors = [];
+        $status = 202;
+
+        if (!Hash::check($request->oldPassword, $request->user()->password)) {
+            $message = 'Contraseña Incorrecta.';
+            $errors['oldPassword'][] = 'Contraseña incorrecta';
+        }
+        
+        $newPassword = $validator->validated()['newPassword'];
+
+        if (Hash::check($newPassword, $request->user()->password)) {
+            $message = 'Contraseña nueva inválida';
+            $errors['newPassword'][] = 'Contraseña inválida';
+        }
+        
+        if (!empty($errors)) {
+            $status = 422;
+            return response()->json([
+                'message' => $message, 
+                'errors' => $errors
+            ], $status);
+        }
+
+        return response()->json([
+            'message' => 'Contraseña actualizada con éxito.'
+        ], 202);
     }
 }
