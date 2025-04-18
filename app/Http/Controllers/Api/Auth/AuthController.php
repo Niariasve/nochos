@@ -85,34 +85,37 @@ class AuthController extends Controller
             'newPasswordAgain.same' => 'Las contraseñas no coinciden'
         ]);
 
-        // Sorprendentemente laravel hace esto por defecto
-        // if ($validator->fails()) {
-        //     return response()->json($validator->validated());
-        // }
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Errores en la validación.',
+                'errors' => $validator->errors()
+            ]);
+        }
 
-        $message = '';
+        $data = $validator->validated();
+        $user = $request->user();
         $errors = [];
-        $status = 202;
 
-        if (!Hash::check($request->oldPassword, $request->user()->password)) {
-            $message = 'Contraseña Incorrecta.';
+        if (!Hash::check($data['oldPassword'], $user->password)) {
             $errors['oldPassword'][] = 'Contraseña incorrecta';
         }
-        
-        $newPassword = $validator->validated()['newPassword'];
 
-        if (Hash::check($newPassword, $request->user()->password)) {
-            $message = 'Contraseña nueva inválida';
+        if (Hash::check($data['newPassword'], $user->password)) {
             $errors['newPassword'][] = 'Contraseña inválida';
         }
         
         if (!empty($errors)) {
-            $status = 422;
             return response()->json([
-                'message' => $message, 
+                'message' => 'Error en el cambio de contraseña.', 
                 'errors' => $errors
-            ], $status);
+            ], 422);
         }
+
+        $user->update([
+            'password' => Hash::make($data['newPassword'])
+        ]);
+
+        //TODO -> Enviar correo cuando se realice la accion de cambio de contraseña
 
         return response()->json([
             'message' => 'Contraseña actualizada con éxito.'
