@@ -69,6 +69,7 @@ class AuthController extends Controller
         ], 200);
     }
 
+    //TODO -> create a custom request for change password
     function changePassword(Request $request) {
         $validator = Validator::make($request->all(), [
             'oldPassword' => 'required|string',
